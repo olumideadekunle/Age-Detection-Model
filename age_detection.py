@@ -114,6 +114,20 @@ def process_image(image_path, output_path="output.jpg"):
     cv2.imwrite(output_path, frame)
     print(f"\nResult saved to: {output_path}")
 
+    # Export results to CSV
+    import csv
+    csv_path = "output.csv"
+    write_header = not os.path.exists(csv_path)
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.writer(f)
+        if write_header:
+            writer.writerow(["ImageName", "FaceID", "DetectedGender", "AgeRange", "Confidence"])
+        for i, (x1, y1, x2, y2, conf) in enumerate(faces):
+            face_img = frame[y1:y2, x1:x2]
+            age, gender = predict_age_gender(age_net, gender_net, face_img)
+            writer.writerow([os.path.basename(image_path), i + 1, gender, age, round(conf, 4)])
+    print(f"Results saved to {csv_path}")
+
 
 def process_webcam():
     face_net, age_net, gender_net = load_networks()

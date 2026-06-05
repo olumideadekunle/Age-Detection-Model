@@ -1,0 +1,13 @@
+ImageName,FaceID,DetectedGender,AgeRange,Confidence
+photo1.jpg,1,Male,(25-32),0.94
+photo1.jpg,2,Female,(15-20),0.88
+photo2.jpg,1,Female,(38-43),0.91
+photo3.jpg,1,Male,(48-53),0.87
+photo3.jpg,2,Male,(25-32),0.93
+photo4.jpg,1,Female,(4-6),0.96
+photo5.jpg,1,Male,(60-100),0.85
+photo6.jpg,1,Female,(25-32),0.92
+photo7.jpg,1,Male,(15-20),0.89
+photo8.jpg,1,Female,(38-43),0.90
+photo9.jpg,1,Male,(8-12),0.95
+photo10.jpg,1,Female,(0-2),0.97
