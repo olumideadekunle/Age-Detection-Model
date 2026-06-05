@@ -163,20 +163,80 @@ def process_webcam():
     cv2.destroyAllWindows()
 
 
+def process_batch(folder_path, output_folder="batch_output"):
+    """Process all images in a folder and save results to output.csv."""
+    os.makedirs(output_folder, exist_ok=True)
+    supported = (".jpg", ".jpeg", ".png", ".bmp")
+    images = [f for f in os.listdir(folder_path) if f.lower().endswith(supported)]
+
+    if not images:
+        print(f"No images found in {folder_path}")
+        return
+
+    print(f"Found {len(images)} image(s) in {folder_path}")
+    face_net, age_net, gender_net = load_networks()
+
+    import csv
+    csv_path = "output.csv"
+    all_rows = []
+
+    for img_name in images:
+        img_path = os.path.join(folder_path, img_name)
+        frame = cv2.imread(img_path)
+        if frame is None:
+            print(f"  Skipping {img_name} — could not read file")
+            continue
+
+        faces = detect_faces(face_net, frame)
+        if not faces:
+            print(f"  {img_name} — no faces detected")
+            all_rows.append([img_name, 0, "N/A", "N/A", "N/A"])
+            continue
+
+        for i, (x1, y1, x2, y2, conf) in enumerate(faces):
+            face_img = frame[y1:y2, x1:x2]
+            if face_img.size == 0:
+                continue
+            age, gender = predict_age_gender(age_net, gender_net, face_img)
+            label = f"{gender}, {age}"
+            print(f"  {img_name} — Face {i+1}: {label} (conf: {conf:.2f})")
+            all_rows.append([img_name, i + 1, gender, age, round(conf, 4)])
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.rectangle(frame, (x1, y1 - 30), (x2, y1), (0, 255, 0), -1)
+            cv2.putText(frame, label, (x1 + 5, y1 - 8),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2)
+
+        out_path = os.path.join(output_folder, img_name)
+        cv2.imwrite(out_path, frame)
+
+    with open(csv_path, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["ImageName", "FaceID", "DetectedGender", "AgeRange", "Confidence"])
+        writer.writerows(all_rows)
+
+    print(f"\nBatch complete. Annotated images saved to {output_folder}/")
+    print(f"Results saved to {csv_path}")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Age & Gender Detection")
-    parser.add_argument("--image", type=str, help="Path to input image")
-    parser.add_argument("--webcam", action="store_true", help="Use webcam")
-    parser.add_argument("--output", type=str, default="output.jpg", help="Output image path")
+    parser.add_argument("--image",  type=str, help="Path to a single input image")
+    parser.add_argument("--batch",  type=str, help="Path to folder of images for batch processing")
+    parser.add_argument("--webcam", action="store_true", help="Use webcam for live detection")
+    parser.add_argument("--output", type=str, default="output.jpg", help="Output path for single image")
     args = parser.parse_args()
 
     download_models()
 
     if args.image:
         process_image(args.image, args.output)
+    elif args.batch:
+        process_batch(args.batch)
     elif args.webcam:
         process_webcam()
     else:
         print("Usage:")
-        print("  Image:  python age_detection.py --image photo.jpg")
-        print("  Webcam: python age_detection.py --webcam")
+        print("  Single image : python age_detection.py --image photo.jpg")
+        print("  Batch folder : python age_detection.py --batch sample_images/")
+        print("  Webcam live  : python age_detection.py --webcam")
